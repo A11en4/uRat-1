@@ -5,13 +5,17 @@
 Author: Darrel Weng
 
 Source code for the microrat.
+
+FRWD ~18cm
+RTRN,LTRN ~90deg
 */
 #include "mbed.h"
 #define pwmOn 0.25f
 #define pwmOff 0.0f
 #define thresh 0.5f
-#define FRWD 56
-#define TURN 12
+#define FRWD 30
+#define RTRN 15
+#define LTRN 15
 
 //=======================================
 // Prototypes
@@ -152,7 +156,7 @@ void countR() {
     rCount++;
 }
 //=======================================
-const int err = 2;
+const int err = 1;
 // Closed-loop Functions
 void mvFwd(int val=FRWD) {
     uint32_t l = lCount;
@@ -181,7 +185,7 @@ void mvBck(int val=FRWD) {
     }
     netDist -= (lCount - l);
 }
-void mvLft(int val=TURN) {
+void mvLft(int val=LTRN) {
     uint32_t l = lCount;
     uint32_t r = rCount;
     while((lCount-l<=val)&&(rCount-r<=val)){
@@ -194,7 +198,7 @@ void mvLft(int val=TURN) {
     }
     netAng += (lCount - l);
 }
-void mvRgt(int val=FRWD) {
+void mvRgt(int val=RTRN) {
     uint32_t l = lCount;
     uint32_t r = rCount;
     while((lCount-l<=val)&&(rCount-r<=val)) {
@@ -207,7 +211,7 @@ void mvRgt(int val=FRWD) {
     }
     netAng -= (lCount - l);
 }
-void reorient() {
+void reorientF() {
     if (lCount > rCount+err) {
         while(lCount > rCount+err) {
             rfwd();
@@ -228,7 +232,7 @@ void reorient() {
 // fWall, rWall, lWall are booleans indicating wall positions
 // mvFwd() mvRgt() mvLft() mvBck() reorient() are available commands to use
 // NOTE: 1) mvBck() is -VERY- iffy; please don't use
-//       2) please call reorient() after a mv___() command
+//       2) please call reorientF() after a mvFwd() command
 
 // Simple example of how to use
 void exampleAI() {
@@ -248,9 +252,20 @@ void exampleAI() {
 }
 // Testing encoder counts
 void distanceTest() {
-    mvFwd();
-    wait(1.0);
-    reorient();
+    for (int i=0;i<4;i++) {
+        mvFwd();
+        reorientF();
+        mvRgt();
+    }
+    mvLft();
+    mvLft();
+    for (int j=0;j<4;j++) {
+        mvFwd();
+        reorientF();
+        mvLft();
+    }
+    mvRgt();
+    mvRgt();
 }
 /* YOUR GLOBAL VARIABLES HERE */
 
@@ -283,7 +298,3 @@ int main() {
         //pc.printf("%d,%d\n\r",(int)lCount,(int)rCount);
     }
 }
-
-
-
-
