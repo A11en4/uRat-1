@@ -12,7 +12,8 @@ RTRN,LTRN ~90deg
 #include "mbed.h"
 #define pwmOn 0.25f
 #define pwmOff 0.0f
-#define thresh 0.5f
+#define thresh 0.6f
+#define fhresh 0.5f
 #define FRWD 30
 #define RTRN 15
 #define LTRN 15
@@ -124,22 +125,22 @@ void lfwd() {
 }
 //=======================================
 // Wall Checking Function
-void wallCheck() {
-    if (right > thresh) {
+void wallCheck(float side=thresh, float frnt=fhresh) {
+    if (right > side) {
         rWall = true;
         rw = 1;
     } else {
         rWall = false;
         rw = 0;
     }
-    if (left > thresh) {
+    if (left > side) {
         lWall = true;
         lw = 1;
     } else {
         lWall = false;
         lw = 0;
     }
-    if (front > thresh) {
+    if (front > frnt) {
         fWall = true;
         fw = 1;
     } else {
@@ -162,14 +163,27 @@ void mvFwd(int val=FRWD) {
     uint32_t l = lCount;
     uint32_t r = rCount;
     while((lCount-l<=val)&&(rCount-r<=val)){
-        fwd();
+        wallCheck(0.9f,0.7f);
+        if (fWall) {
+            break;   
+        }
+        else if (lWall) {
+            rbck();
+        }
+        else if (rWall) {
+            lbck();
+        }
+        else {
+            fwd();
+        }
     }
     bck();
     stp();
+    wait(0.1);
     // compensation
-    if ((lCount-l-val>err)&&(rCount-r-val>err)) {
-        mvBck(lCount-l-val);        
-    }
+    //if ((lCount-l-val>err)&&(rCount-r-val>err)) {
+//        mvBck(lCount-l-val);        
+//    }
     netDist += (lCount - l);
 }
 void mvBck(int val=FRWD) {
@@ -180,9 +194,10 @@ void mvBck(int val=FRWD) {
     }
     fwd();
     stp();
-    if ((lCount-l-val>err)&&(rCount-r-val>err)) {
-        mvFwd(lCount-l-val);        
-    }
+    wait(0.1);
+    //if ((lCount-l-val>err)&&(rCount-r-val>err)) {
+//        mvFwd(lCount-l-val);        
+//    }
     netDist -= (lCount - l);
 }
 void mvLft(int val=LTRN) {
@@ -193,9 +208,10 @@ void mvLft(int val=LTRN) {
     }
     rgt();
     stp();
-    if ((lCount-l-val>err)&&(rCount-r-val>err)) {
-        mvRgt(lCount-l-val);        
-    }
+    wait(0.1);
+    //if ((lCount-l-val>err)&&(rCount-r-val>err)) {
+//        mvRgt(lCount-l-val);        
+//    }
     netAng += (lCount - l);
 }
 void mvRgt(int val=RTRN) {
@@ -206,9 +222,10 @@ void mvRgt(int val=RTRN) {
     }
     lft();
     stp();
-    if ((lCount-l-val>err)&&(rCount-r-val>err)) {
-        mvLft(lCount-l-val);        
-    }
+    wait(0.1);
+    //if ((lCount-l-val>err)&&(rCount-r-val>err)) {
+//        mvLft(lCount-l-val);        
+//    }
     netAng -= (lCount - l);
 }
 void reorientF() {
@@ -226,6 +243,13 @@ void reorientF() {
         lbck();
         stp();
     }
+    wait(0.1);
+}
+void turnAround() {
+    mvRgt();
+    wait(0.2);
+    mvRgt();
+    wait(0.2);
 }
 //=======================================
 // AI Algorithms
@@ -247,23 +271,23 @@ void exampleAI() {
         mvLft();
     }
     else {
-        mvBck();    
+        turnAround();    
     }
 }
 // Testing encoder counts
 void distanceTest() {
     for (int i=0;i<4;i++) {
         mvFwd();
-        reorientF();
         mvRgt();
     }
     mvLft();
     mvLft();
+    mvLft();
     for (int j=0;j<4;j++) {
         mvFwd();
-        reorientF();
         mvLft();
     }
+    mvRgt();
     mvRgt();
     mvRgt();
 }
@@ -293,8 +317,9 @@ int main() {
     */
     // loop
     while(1) {
-        distanceTest();
-        //exampleAI();
+        //distanceTest();
+        exampleAI();
         //pc.printf("%d,%d\n\r",(int)lCount,(int)rCount);
+        //wallCheck();
     }
 }
