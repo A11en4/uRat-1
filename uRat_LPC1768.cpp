@@ -1,3 +1,4 @@
+
 /*
 #########################################
 # Fall 2014 IEEE Micromouse Competition #
@@ -10,6 +11,8 @@ FRWD ~18cm
 RTRN,LTRN ~90deg
 */
 #include "mbed.h"
+#include <stdio.h>
+#include <stdlib.h>
 #define pwmOn 0.25f
 #define pwmOff 0.0f
 #define thresh 0.6f
@@ -39,7 +42,7 @@ AnalogIn left(p19);
 AnalogIn right(p18);
 //=======================================
 // 4 PWM Outputs
-/* 
+/*
 a1,b1 = bck
 a2,b2 = fwd
 a1,b2 = rgt
@@ -73,31 +76,31 @@ void fwd() {
     a1 = pwmOff;
     b1 = pwmOff;
     a2 = pwmOn;
-    b2 = pwmOn;    
+    b2 = pwmOn;
 }
 void bck() {
     a2 = pwmOff;
     b2 = pwmOff;
     b1 = pwmOn;
-    a1 = pwmOn;    
+    a1 = pwmOn;
 }
 void rgt() {
     a1 = pwmOff;
     b2 = pwmOff;
     a2 = pwmOn;
-    b1 = pwmOn;   
+    b1 = pwmOn;
 }
 void lft() {
     a2 = pwmOff;
     b1 = pwmOff;
     a1 = pwmOn;
-    b2 = pwmOn;   
+    b2 = pwmOn;
 }
 void stp() {
     a1 = pwmOff;
     a2 = pwmOff;
     b1 = pwmOff;
-    b2 = pwmOff;   
+    b2 = pwmOff;
 }
 void rbck() {
     b1 = pwmOn;
@@ -165,7 +168,7 @@ void mvFwd(int val=FRWD) {
     while((lCount-l<=val)&&(rCount-r<=val)){
         wallCheck(0.9f,0.7f);
         if (fWall) {
-            break;   
+            break;
         }
         else if (lWall) {
             rbck();
@@ -182,7 +185,7 @@ void mvFwd(int val=FRWD) {
     wait(0.1);
     // compensation
     //if ((lCount-l-val>err)&&(rCount-r-val>err)) {
-//        mvBck(lCount-l-val);        
+//        mvBck(lCount-l-val);
 //    }
     netDist += (lCount - l);
 }
@@ -196,7 +199,7 @@ void mvBck(int val=FRWD) {
     stp();
     wait(0.1);
     //if ((lCount-l-val>err)&&(rCount-r-val>err)) {
-//        mvFwd(lCount-l-val);        
+//        mvFwd(lCount-l-val);
 //    }
     netDist -= (lCount - l);
 }
@@ -210,7 +213,7 @@ void mvLft(int val=LTRN) {
     stp();
     wait(0.1);
     //if ((lCount-l-val>err)&&(rCount-r-val>err)) {
-//        mvRgt(lCount-l-val);        
+//        mvRgt(lCount-l-val);
 //    }
     netAng += (lCount - l);
 }
@@ -224,7 +227,7 @@ void mvRgt(int val=RTRN) {
     stp();
     wait(0.1);
     //if ((lCount-l-val>err)&&(rCount-r-val>err)) {
-//        mvLft(lCount-l-val);        
+//        mvLft(lCount-l-val);
 //    }
     netAng -= (lCount - l);
 }
@@ -251,6 +254,99 @@ void turnAround() {
     mvRgt();
     wait(0.2);
 }
+typedef struct Node {
+    int item;
+    struct Node* next;
+} Node;
+
+typedef struct Stack {
+    Node* head;
+    Node* tail;
+
+    void (*push) (struct Queue*, int); // add item to tail
+    // get item from head and remove it from queue
+    int (*pop) (struct Queue*);
+    // get item from head but keep it in queue
+    int (*peek) (struct Queue*);
+    // display all element in queue
+    void (*display) (struct Queue*);
+    // size of this queue
+    int size;
+} Queue;
+
+void push (Queue* queue, int item);
+
+int pop (Queue* queue);
+
+int peek (Queue* queue);
+
+void display (Queue* queue);
+
+Queue createQueue ();
+
+void push (Queue* queue, int item) {
+    // Create a new node
+    Node* n = (Node*) malloc (sizeof(Node));
+    n->item = item;
+    n->next = NULL;
+
+    if (queue->tail == NULL) { // no head
+        queue->tail = n;
+    } else{
+        n->next = queue->head;
+    }
+    queue->head = n;
+    queue->size++;
+}
+
+int pop (Queue* queue) {
+    // get the first item
+    Node* head = queue->head;
+    int item = head->item;
+    // move head pointer to next node, decrease size
+    queue->head = head->next;
+    queue->size--;
+    // free the memory of original head
+    free(head);
+    return item;
+}
+
+int peek (Queue* queue) {
+    Node* head = queue->head;
+    return head->item;
+}
+
+void display (Queue* queue) {
+    printf("\nDisplay: ");
+    // no item
+    if (queue->size == 0)
+        printf("No item in queue.\n");
+    else { // has item(s)
+        Node* head = queue->head;
+        int i, size = queue->size;
+        printf("%d item(s):\n", queue->size);
+        for (i = 0; i < size; i++) {
+            if (i > 0)
+                printf(", ");
+            printf("%d", head->item);
+            head = head->next;
+        }
+    }
+    printf("\n\n");
+}
+
+Queue createQueue () {
+    Queue queue;
+    queue.size = 0;
+    queue.head = NULL;
+    queue.tail = NULL;
+    queue.push = &push;
+    queue.pop = &pop;
+    queue.peek = &peek;
+    queue.display = &display;
+    return queue;
+}
+
 //=======================================
 // AI Algorithms
 // fWall, rWall, lWall are booleans indicating wall positions
@@ -266,12 +362,12 @@ void exampleAI() {
     }
     else if (!rWall) {
         mvRgt();
-    } 
+    }
     else if (!lWall) {
         mvLft();
     }
     else {
-        turnAround();    
+        turnAround();
     }
 }
 // Testing encoder counts
@@ -292,34 +388,143 @@ void distanceTest() {
     mvRgt();
 }
 /* YOUR GLOBAL VARIABLES HERE */
+const int FWD = 2;
+const int LFT = -1;
+const int RGT = 1;
+const int INT = 0;
+const int NORTH = 0;
+const int SOUTH = 2;
+const int EAST = 1;
+const int WEST = 3;
+const int MOD = 4;
+int ORIENT = NORTH;
+bool MAP[16][16];
+int X = 0;
+int Y = 0;
+const int GOAL_X = 8;
+const int GOAL_Y = 8;
+bool REV = false;
+Queue ACT_STACK = createQueue();
 
+bool visit(){
+    if (ORIENT == NORTH){
+        if (Y+1 < 16) {
+            return MAP[X][Y+1];
+        } else {
+            return true
+        }
+    }
+    else if (ORIENT == SOUTH){
+        if (Y-1 >= 0) {
+            return MAP[X][Y-1];
+        } else {
+            return true
+        }
+    }
+    else if (ORIENT == EAST){
+        if (X+1 < 16) {
+            return MAP[X+1][Y];
+        } else {
+            return true
+        }
+    }
+    else if (ORIENT == WEST){
+        if (X-1 >= 0) {
+            return MAP[X-1][Y];
+        } else {
+            return true
+        }
+    }
+}
+
+void update(int ACT) {
+    if (ACT = FWD) {
+        if (ORIENT == NORTH){
+            Y = Y + 1;
+        } else if (ORIENT == SOUTH){
+            Y = Y - 1;
+        } else if (ORIENT == EAST){
+            X = X + 1;
+        } else if (ORIENT == WEST){
+            X = X - 1;
+        }
+        MAP[X][Y] = true;
+        if (!rWall || !lWall) {
+            ACT_STACK.push(&ACT_STACK, INT);
+        }
+        ACT_STACK.push(&ACT_STACK, ACT);
+
+    } else {
+        ORIENT = (ORIENT + ACT + MOD) % MOD;
+    }
+
+
+}
+
+bool goal() {
+}
 /* YOUR METHOD HERE */
 void search() {
-    
+    if (goal()) {
+        execute_path();
+        return -1;
+    }
+    if (REV == true) {
+        while ( ACT_STACK.peek(&ACT_STACK) != 0){
+            ACT = ACT_STACK.pop(&ACT_STACK);
+            if (ACT == FWD){
+                mvFwd();
+            } else if (ACT == RGT) {
+                mvLft();
+            } else if (ACT == LFT) {
+                mvRgt();
+            }
+        }
+        ACT = ACT_STACK.pop(&ACT_STACK);
+        REV == false;
+    } else {
+        wallCheck();
+        if (!fWall && !visit()) {
+            update(FWD);
+            mvFwd();
+        }
+        else if (!rWall) {
+            update(RGT)
+            mvRgt();
+        }
+        else if (!lWall) {
+            update(LFT);
+            mvLft();
+        }
+        else {
+            REV = true;
+            turnAround();
+        }
+    }
 }
 void execute_path() {
-    
+
 }
 //==================================================================
 // Main
 int main() {
     // setup
-    stp();
-    lw = 0;
-    rw = 0;
-    fw = 0;
-    rA.rise(&countR);
-    rA.fall(&countR);
-    lA.rise(&countL);
-    lA.fall(&countL);
-    /*
-    * ANY ADDITIONAL SETUP HERE
-    */
-    // loop
-    while(1) {
-        //distanceTest();
-        exampleAI();
-        //pc.printf("%d,%d\n\r",(int)lCount,(int)rCount);
-        //wallCheck();
-    }
+//    stp();
+//    lw = 0;
+//    rw = 0;
+//    fw = 0;
+//    rA.rise(&countR);
+//    rA.fall(&countR);
+//    lA.rise(&countL);
+//    lA.fall(&countL);
+//    /*
+//    * ANY ADDITIONAL SETUP HERE
+//    */
+//    // loop
+//    while(1) {
+//        //distanceTest();
+//        exampleAI();
+//        //pc.printf("%d,%d\n\r",(int)lCount,(int)rCount);
+//        //wallCheck();
+//    }
 }
